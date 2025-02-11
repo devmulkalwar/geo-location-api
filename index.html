@@ -3,33 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Location</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>My Location (Google Maps)</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        #map { width: 100%; height: 500px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); }
+        iframe { width: 100%; height: 500px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); }
     </style>
 </head>
 <body>
 
     <h1>My Current Location</h1>
-    <div id="map"></div>
+    <iframe id="gmap" src="https://www.google.com/maps?q=40.7128,-74.0060&output=embed" allowfullscreen></iframe>
 
     <script>
-        let map = L.map('map').setView([40.7128, -74.0060], 13); // Default: New York
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
-        let marker = L.marker([40.7128, -74.0060]).addTo(map).bindPopup("Default Location (New York)").openPopup();
+        function updateMap(lat, lon) {
+            document.getElementById("gmap").src = `https://www.google.com/maps?q=${lat},${lon}&output=embed`;
+        }
 
         function showLocation(position) {
             let lat = position.coords.latitude;
             let lon = position.coords.longitude;
-            marker.setLatLng([lat, lon]).bindPopup("You are here!").openPopup();
-            map.setView([lat, lon], 15);
+            updateMap(lat, lon);
         }
 
         function handleError(error) {
