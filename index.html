@@ -1,30 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Location & Route Finder (OpenStreetMap)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        #map { width: 100%; height: 500px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); margin-top: 10px; }
+        input, button { margin: 5px; padding: 10px; font-size: 16px; }
+    </style>
+</head>
 <body>
-<h1>HTML Geolocation</h1>
-<p>Click the button to get your coordinates.</p>
 
-<button onclick="getLocation()">Try It</button>
+    <h1>Live Location & Route Finder</h1>
+    <p>Click "Start Tracking" to see your live location.</p>
+    
+    <button onclick="startTracking()">Start Tracking</button>
+    
+    <p id="location">Waiting for location...</p>
 
-<p id="demo"></p>
+    <div>
+        <input type="text" id="startLocation" placeholder="Enter start location (lat,lng)">
+        <input type="text" id="endLocation" placeholder="Enter destination (lat,lng)">
+        <button onclick="showRoute()">Show Route</button>
+    </div>
 
-<script>
-const x = document.getElementById("demo");
+    <div id="map"></div>
 
-function getLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(showPosition);
-  } else { 
-    x.innerHTML = "Geolocation is not supported by this browser.";
-  }
-}
+    <script>
+        let map = L.map('map').setView([21.145800, 79.088155], 13); // Centered on Nagpur
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-function showPosition(position) {
-  x.innerHTML = "Latitude: " + position.coords.latitude + 
-  "<br>Longitude: " + position.coords.longitude;
-}
-</script>
+        let marker, userCircle;
+        let tracking = false;
+        let routeLayer;
+
+        function startTracking() {
+            if (navigator.geolocation) {
+                tracking = true;
+                navigator.geolocation.watchPosition(updateLocation, handleError, { enableHighAccuracy: true });
+            } else {
+                alert("Geolocation is not supported.");
+            }
+        }
+
+        function updateLocation(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+
+            document.getElementById("location").innerHTML = `Latitude: ${lat} <br>Longitude: ${lon}`;
+
+            if (!marker) {
+                marker = L.marker([lat, lon]).addTo(map).bindPopup("You are here").openPopup();
+                userCircle = L.circle([lat, lon], { radius: 50, color: 'blue' }).addTo(map);
+            } else {
+                marker.setLatLng([lat, lon]);
+                userCircle.setLatLng([lat, lon]);
+            }
+            map.setView([lat, lon], 15);
+        }
+
+        function showRoute() {
+            let start = document.getElementById("startLocation").value.split(",");
+            let end = document.getElementById("endLocation").value.split(",");
+
+            if (start.length !== 2 || end.length !== 2) {
+                alert("Enter valid coordinates (latitude,longitude).");
+                return;
+            }
+
+            let startLatLng = [parseFloat(start[0]), parseFloat(start[1])];
+            let endLatLng = [parseFloat(end[0]), parseFloat(end[1])];
+
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+
+            routeLayer = L.polyline([startLatLng, endLatLng], { color: 'red', weight: 4 }).addTo(map);
+            map.fitBounds([startLatLng, endLatLng]);
+        }
+
+        function handleError(error) {
+            alert("Geolocation failed. Please enable GPS.");
+        }
+    </script>
 
 </body>
 </html>
-
