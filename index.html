@@ -1,73 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Location (Google Maps)</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-
-        iframe {
-            width: 100%;
-            height: 500px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-            margin-top: 20px;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-    </style>
-</head>
-
+<html>
 <body>
+<h1>HTML Geolocation</h1>
+<p>Click the button to get your coordinates.</p>
 
-    <h1>Find My Current Location</h1>
-    <button onclick="getLocation()">Show My Location</button>
-    <iframe id="gmap" src="https://www.google.com/maps?q=40.7128,-74.0060&output=embed" allowfullscreen></iframe>
+<button onclick="getLocation()">Try It</button>
 
-    <script>
-        function updateMap(lat, lon) {
-            document.getElementById("gmap").src = `https://www.google.com/maps?q=${lat},${lon}&output=embed`;
-        }
+<p id="demo"></p>
 
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, handleError, { enableHighAccuracy: true });
-            } else {
-                alert("Geolocation is not supported by this browser.");
-            }
-        }
+<script>
+const x = document.getElementById("demo");
 
-        function showPosition(position) {
-            let lat = position.coords.latitude;
-            let lon = position.coords.longitude;
-            updateMap(lat, lon);
-        }
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showPosition);
+  } else { 
+    x.innerHTML = "Geolocation is not supported by this browser.";
+  }
+}
 
-        function handleError(error) {
-            alert("Geolocation failed. Showing default location.");
-        }
-    </script>
+function showPosition(position) {
+  x.innerHTML = "Latitude: " + position.coords.latitude + 
+  "<br>Longitude: " + position.coords.longitude;
+}
+</script>
 
 </body>
-
 </html>
+
