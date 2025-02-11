@@ -105,6 +105,7 @@
         <input type="text" id="destination" placeholder="Enter Destination (lat,lng)">
         <button onclick="calculateRoute()">🗺️ Calculate Route</button>
         <button onclick="recenterMap()">🎯 Re-center Map</button>
+        <button onclick="clearMarkers()">🗑️ Clear Markers</button>
 
         <div class="distance-info">
             📏 Distance: <span id="distance">-</span> 🕒 ETA: <span id="eta">-</span>
@@ -117,6 +118,7 @@
         let map = L.map('map').setView([21.145800, 79.088155], 13); // Default location: Nagpur
         let userMarker, routingControl, userLat, userLng;
         let isFirstLocation = true;
+        let markers = []; // Store added markers
 
         // Add OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -194,6 +196,22 @@
                 map.setView([userLat, userLng], 15);
             }
         }
+
+        // Function to add a marker on map click
+        function addMarker(e) {
+            let newMarker = L.marker(e.latlng).addTo(map)
+                .bindPopup(`📍 Marker at ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`).openPopup();
+            markers.push(newMarker);
+        }
+
+        // Function to clear all markers
+        function clearMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        // Attach click event listener to add marker
+        map.on('click', addMarker);
 
         // Start tracking user's live location
         if (navigator.geolocation) {
