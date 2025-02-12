@@ -6,126 +6,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Location & Route Mapping</title>
 
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f0f2f5;
-            color: #2c3e50;
-        }
-
-        h1 {
-            color: #3498db;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-        }
-
         #map {
             width: 100%;
             height: 75vh;
-            border-radius: 15px;
+            border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             margin-top: 20px;
-        }
-
-        .controls {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        input {
-            padding: 12px;
-            border: 2px solid #3498db;
-            border-radius: 8px;
-            width: 200px;
-            transition: all 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #2980b9;
-            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
-        }
-
-        button {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-        }
-
-        .status-box {
-            background: #ecf0f1;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-
-        #current-coords {
-            color: #e74c3c;
-            font-weight: 600;
-        }
-
-        .distance-info {
-            font-size: 1.1em;
-            color: #27ae60;
-            margin-top: 10px;
         }
     </style>
 </head>
 
-<body>
+<body class="bg-light">
 
-    <h1>🚀 Live Location Tracker & Navigation</h1>
+    <div class="container py-4">
+        <h1 class="text-primary text-center">🚀 Live Location Tracker & Navigation</h1>
 
-    <div class="controls">
-        <div class="status-box">
-            📍 <b>Current Position:</b> <span id="current-coords">Detecting...</span>
+        <div class="card shadow p-4 mt-3">
+            <div class="status-box mb-3">
+                📍 <b>Current Position:</b> <span id="current-coords" class="text-danger fw-bold">Detecting...</span>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <input type="text" id="destination" class="form-control" placeholder="Enter Destination (lat,lng)">
+                </div>
+                <div class="col-md-6 d-grid">
+                    <button class="btn btn-primary" onclick="calculateRoute()">🗺️ Calculate Route</button>
+                </div>
+            </div>
+
+            <div class="row g-2 mt-2">
+                <div class="col-md-4 d-grid">
+                    <button class="btn btn-secondary" onclick="recenterMap()">🎯 Re-center Map</button>
+                </div>
+                <div class="col-md-4 d-grid">
+                    <button class="btn btn-danger" onclick="clearMarkers()">🗑️ Clear Markers</button>
+                </div>
+            </div>
+
+            <div class="alert alert-success mt-3">
+                📏 Distance: <span id="distance" class="fw-bold">-</span> 🕒 ETA: <span id="eta" class="fw-bold">-</span>
+            </div>
         </div>
 
-        <input type="text" id="destination" placeholder="Enter Destination (lat,lng)">
-        <button onclick="calculateRoute()">🗺️ Calculate Route</button>
-        <button onclick="recenterMap()">🎯 Re-center Map</button>
-        <button onclick="clearMarkers()">🗑️ Clear Markers</button>
-
-        <div class="distance-info">
-            📏 Distance: <span id="distance">-</span> 🕒 ETA: <span id="eta">-</span>
-        </div>
+        <div id="map" class="mt-3"></div>
     </div>
 
-    <div id="map"></div>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        let map = L.map('map').setView([21.145800, 79.088155], 13); // Default location: Nagpur
+        let map = L.map('map').setView([21.145800, 79.088155], 13); // Default: Nagpur
         let userMarker, routingControl, userLat, userLng;
         let isFirstLocation = true;
         let markers = []; // Store added markers
 
-        // Add OpenStreetMap tile layer
+        // OpenStreetMap Tile Layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Function to update user's live location
+        // Update User's Live Location
         function trackLocation(position) {
             userLat = position.coords.latitude;
             userLng = position.coords.longitude;
@@ -144,12 +94,11 @@
             }
         }
 
-        // Error handling for geolocation
-        function showError(error) {
+        function showError() {
             alert("Geolocation failed. Please enable location access.");
         }
 
-        // Function to calculate route
+        // Calculate Route
         function calculateRoute() {
             let destInput = document.getElementById("destination").value;
 
@@ -165,7 +114,7 @@
                 return;
             }
 
-            // Remove existing route if any
+            // Remove existing route
             if (routingControl) {
                 map.removeControl(routingControl);
             }
@@ -180,40 +129,40 @@
                 formatter: new L.Routing.Formatter({ language: "en", units: "metric" })
             }).addTo(map);
 
-            // Show distance and estimated time
+            // Display distance & estimated time
             routingControl.on("routesfound", function (e) {
-                let distanceKm = e.routes[0].summary.totalDistance / 1000; // Convert meters to km
-                let estimatedTimeMin = Math.round(distanceKm / 50 * 60); // Assume avg speed 50 km/h
+                let distanceKm = e.routes[0].summary.totalDistance / 1000;
+                let estimatedTimeMin = Math.round(distanceKm / 50 * 60);
 
                 document.getElementById("distance").textContent = `${distanceKm.toFixed(1)} km`;
                 document.getElementById("eta").textContent = `~${estimatedTimeMin} mins`;
             });
         }
 
-        // Function to re-center map on user's location
+        // Re-center Map
         function recenterMap() {
             if (userLat && userLng) {
                 map.setView([userLat, userLng], 15);
             }
         }
 
-        // Function to add a marker on map click
+        // Add Marker on Click
         function addMarker(e) {
             let newMarker = L.marker(e.latlng).addTo(map)
                 .bindPopup(`📍 Marker at ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`).openPopup();
             markers.push(newMarker);
         }
 
-        // Function to clear all markers
+        // Clear All Markers
         function clearMarkers() {
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
         }
 
-        // Attach click event listener to add marker
+        // Listen for map clicks to add markers
         map.on('click', addMarker);
 
-        // Start tracking user's live location
+        // Start tracking user location
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(trackLocation, showError, {
                 enableHighAccuracy: true,
