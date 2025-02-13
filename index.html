@@ -1,172 +1,97 @@
-<!DOCTYPE html>
-<html lang="en">
+<script>
+    let map = L.map('map').setView([21.1458, 79.0882], 13); // Default location: Nagpur
+    let userMarker, routingControl, userLat, userLng;
+    let markers = [];
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Location & Route Mapping</title>
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    // Function to update user's live location
+    function trackLocation(position) {
+        userLat = position.coords.latitude;
+        userLng = position.coords.longitude;
+        document.getElementById("current-coords").textContent = `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`;
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Leaflet JS & Routing Machine -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
-
-    <style>
-        #map {
-            width: 100%;
-            height: 70vh;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        if (userMarker) {
+            userMarker.setLatLng([userLat, userLng]).bindPopup("You are here!").openPopup();
+        } else {
+            userMarker = L.marker([userLat, userLng]).addTo(map).bindPopup("You are here!").openPopup();
+            map.setView([userLat, userLng], 15);
         }
+    }
 
-        .route-info {
-            max-height: 250px;
-            overflow-y: auto;
-            padding: 10px;
-        }
-    </style>
-</head>
+    // Error handling
+    function showError() {
+        alert("Geolocation failed. Please enable location access.");
+    }
 
-<body class="bg-light">
+    // Function to calculate route
+    function calculateRoute() {
+        let destInput = document.getElementById("destination").value;
+        if (!destInput) return alert("Please enter destination coordinates");
 
-    <div class="container mt-4">
-        <h2 class="text-center text-primary mb-4">🚀 Live Location Tracker & Navigation</h2>
+        let [destLat, destLng] = destInput.split(",").map(coord => Number(coord.trim()));
+        if (isNaN(destLat) || isNaN(destLng)) return alert("Invalid coordinate format");
 
-        <div class="row">
-            <!-- Controls & Route Info -->
-            <div class="col-lg-4 col-md-6 mb-3">
-                <div class="card p-3 shadow">
-                    <h5 class="text-secondary">📍 Current Position:</h5>
-                    <p id="current-coords" class="fw-bold text-danger">Detecting...</p>
+        // Remove existing route
+        if (routingControl) map.removeControl(routingControl);
 
-                    <input type="text" id="destination" class="form-control mb-2" placeholder="Enter Destination (lat,lng)">
-                    
-                    <button class="btn btn-primary w-100 mb-2" onclick="calculateRoute()">🗺️ Calculate Route</button>
-                    <button class="btn btn-info w-100 mb-2" onclick="recenterMap()">🎯 Re-center Map</button>
-                    <button class="btn btn-danger w-100" onclick="clearMarkers()">🗑️ Clear Markers</button>
-
-                    <hr>
-
-                    <h6 class="text-success">📏 Distance: <span id="distance">-</span></h6>
-                    <h6 class="text-success">🕒 ETA: <span id="eta">-</span></h6>
-                </div>
-
-                <!-- Route Details -->
-                <div class="card mt-3 shadow">
-                    <div class="card-header bg-dark text-white">🛣️ Route Steps</div>
-                    <div id="route-details" class="route-info text-secondary p-2">No route yet.</div>
-                </div>
-            </div>
-
-            <!-- Map Section -->
-            <div class="col-lg-8 col-md-6">
-                <div id="map"></div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let map = L.map('map').setView([21.1458, 79.0882], 13); // Default location: Nagpur
-        let userMarker, routingControl, userLat, userLng;
-        let markers = [];
-
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
+        // Draw new route
+        routingControl = L.Routing.control({
+            waypoints: [
+                L.latLng(userLat, userLng),
+                L.latLng(destLat, destLng)
+            ],
+            routeWhileDragging: true,
+            createMarker: function () { return null; }, // Disable default markers
+            show: false // Hide default routing UI
         }).addTo(map);
 
-        // Function to update user's live location
-        function trackLocation(position) {
-            userLat = position.coords.latitude;
-            userLng = position.coords.longitude;
-            document.getElementById("current-coords").textContent = `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`;
+        // Show distance, ETA & route steps
+        routingControl.on("routesfound", function (e) {
+            let route = e.routes[0];
+            let distanceKm = route.summary.totalDistance / 1000;
+            let estimatedTimeMin = Math.round(distanceKm / 50 * 60);
 
-            if (userMarker) {
-                userMarker.setLatLng([userLat, userLng]).bindPopup("You are here!").openPopup();
-            } else {
-                userMarker = L.marker([userLat, userLng]).addTo(map).bindPopup("You are here!").openPopup();
-                map.setView([userLat, userLng], 15);
-            }
-        }
+            document.getElementById("distance").textContent = `${distanceKm.toFixed(1)} km`;
+            document.getElementById("eta").textContent = `~${estimatedTimeMin} mins`;
 
-        // Error handling
-        function showError() {
-            alert("Geolocation failed. Please enable location access.");
-        }
+            let stepsHtml = route.instructions.map(step => `<li>${step.text}</li>`).join("");
+            document.getElementById("route-details").innerHTML = `<ul>${stepsHtml}</ul>`;
+        });
+    }
 
-        // Function to calculate route
-        function calculateRoute() {
-            let destInput = document.getElementById("destination").value;
-            if (!destInput) return alert("Please enter destination coordinates");
+    // Function to re-center map
+    function recenterMap() {
+        if (userLat && userLng) map.setView([userLat, userLng], 15);
+    }
 
-            let [destLat, destLng] = destInput.split(",").map(coord => Number(coord.trim()));
-            if (isNaN(destLat) || isNaN(destLng)) return alert("Invalid coordinate format");
+    // Function to add a marker on map click
+    function addMarker(e) {
+        let newMarker = L.marker(e.latlng).addTo(map)
+            .bindPopup(`📍 Marker at ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`).openPopup();
+        markers.push(newMarker);
+    }
 
-            // Remove existing route
-            if (routingControl) map.removeControl(routingControl);
+    // Function to clear all markers
+    function clearMarkers() {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+    }
 
-            // Draw new route
-            routingControl = L.Routing.control({
-                waypoints: [
-                    L.latLng(userLat, userLng),
-                    L.latLng(destLat, destLng)
-                ],
-                routeWhileDragging: true,
-                formatter: new L.Routing.Formatter({ language: "en", units: "metric" })
-            }).addTo(map);
+    // Attach click event listener
+    map.on('click', addMarker);
 
-            // Show distance, ETA & route steps
-            routingControl.on("routesfound", function (e) {
-                let route = e.routes[0];
-                let distanceKm = route.summary.totalDistance / 1000;
-                let estimatedTimeMin = Math.round(distanceKm / 50 * 60);
-
-                document.getElementById("distance").textContent = `${distanceKm.toFixed(1)} km`;
-                document.getElementById("eta").textContent = `~${estimatedTimeMin} mins`;
-
-                let stepsHtml = route.instructions.map(step => `<li>${step.text}</li>`).join("");
-                document.getElementById("route-details").innerHTML = `<ul>${stepsHtml}</ul>`;
-            });
-        }
-
-        // Function to re-center map
-        function recenterMap() {
-            if (userLat && userLng) map.setView([userLat, userLng], 15);
-        }
-
-        // Function to add a marker on map click
-        function addMarker(e) {
-            let newMarker = L.marker(e.latlng).addTo(map)
-                .bindPopup(`📍 Marker at ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`).openPopup();
-            markers.push(newMarker);
-        }
-
-        // Function to clear all markers
-        function clearMarkers() {
-            markers.forEach(marker => map.removeLayer(marker));
-            markers = [];
-        }
-
-        // Attach click event listener
-        map.on('click', addMarker);
-
-        // Track user's live location
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(trackLocation, showError, {
-                enableHighAccuracy: true,
-                maximumAge: 30000,
-                timeout: 27000
-            });
-        } else {
-            alert("Geolocation not supported");
-        }
-    </script>
-
-</body>
-
-</html>
+    // Track user's live location
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(trackLocation, showError, {
+            enableHighAccuracy: true,
+            maximumAge: 30000,
+            timeout: 27000
+        });
+    } else {
+        alert("Geolocation not supported");
+    }
+</script>
